@@ -2,33 +2,22 @@
  * Created by pallavidandane on 13/6/17.
  */
 
-// Userlist data array for filling in info box
-var wareHouseList = [];
-
-// DOM Ready =============================================================
-$(document).ready(function() {
-//    initMap();
-    // Populate the user table on initial page load
-//    populateWareHouses();
-
-});
-
 // Functions =============================================================
 
 var map;
 //var myLatLng = {lat: 18.580085, lng: 73.738125};
-var myLatLng, arrMarkers = [] ;
-var wareHouses;
+var myLatLng, arrMarkers = [], arrUserMarkers = [] ;
+var wareHouses, categories, filterFields, categoryData, selectedCategory, objMarkersFilterQuery = {};
 
 function initMap() {
     myLatLng = new google.maps.LatLng(18.580085, -73.738125);
     map = new google.maps.Map(document.getElementById('mymap'), {
         center: myLatLng,
-        zoom: 10
+        zoom: 3
     });
 //    marker = new google.maps.Marker( {position: myLatLng, map: map} );
 //    marker.setMap( map );
-
+    getTemplates();
     populateWareHouses();
 }
 //function moveMarker( map, marker ) {
@@ -48,11 +37,12 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
 
 var choices = ["one", "two"];
 
-function addInput(divName) {
-    var select = $("#wareHouseCity");
-    var unique = wareHouses.filter((set => f => !set.has(f.city) && set.add(f.city))(new Set));
+function addInput(divName, dataToAppend) {
+    var select = $("#" + divName);
+    var unique = dataToAppend.filter((set => f => !set.has(f[divName]) && set.add(f[divName]))(new Set));
+    select.append($("<option/>").attr("value", "").text(""));
     $.each(unique, function(a, b) {
-        select.append($("<option/>").attr("value", b.city).text(b.city));
+        select.append($("<option/>").attr("value", b[divName]).text(b[divName]));
     });
 //    $("#" + divName).append(select);
 }
@@ -63,7 +53,7 @@ function placeMarkesrs(data) {
     }
     arrMarkers = [];
     $.each(data, function(){
-        myLatLng = new google.maps.LatLng( parseFloat(this.latitude),  parseFloat(this.longitude));
+        myLatLng = new google.maps.LatLng( parseFloat(this.latitude?this.latitude:this.Latitude),  parseFloat(this.longitude?this.longitude:this.Longitude));
         var marker = new google.maps.Marker( {position: myLatLng, map: map} );
         marker.setMap(map);
         var infoWindow = new google.maps.InfoWindow({
@@ -77,6 +67,80 @@ function placeMarkesrs(data) {
     });
 }
 
+function createFilter() {
+    var divFilter = $("#filter");
+    divFilter.empty();
+//    divFilter.append("<div class='filter_group'><label>Category</label><select id='category' onchange='loadFilter(this)' ></select></div>");
+
+    var ele;
+    $.each(filterFields, function(a, b) {
+        divFilter.append("<div class='filter_group'><label>" + b.label + "</label><select id=" + b.key + " onchange=filterMarkerData('"  + selectedCategory + "','" + b.key + "',this)></select></div>");
+        //divFilter.append("");
+//        divFilter.append("");
+        addInput(b.key, categoryData);
+    });
+}
+
+function getTemplates() {
+    // jQuery AJAX call for JSON
+    $.getJSON('/templates/templates', function( data ) {
+        categories = data;
+        var select = $("#category");
+        select.append($("<option/>").attr("value", "").text(""));
+//    var unique = dataToAppend.filter((set => f => !set.has(f[divName]) && set.add(f[divName]))(new Set));
+        for (i = 0; i < categories.length; i++) {
+            select.append($("<option/>").attr("value", categories[i]).text(categories[i]));
+        }
+//    $.each(categories, function(a, b) {
+//        select.append($("<option/>").attr("value", b).text(b));
+//    });
+    });
+
+};
+
+function getData(dbName) {
+    $.getJSON('/wareHouses/getData',{"docType":dbName}, function( data ) {
+        categoryData = data;
+        createFilter();
+    });
+
+}
+
+function loadFilter(element) {
+    var value = element.value;
+    selectedCategory = value;
+
+    $.getJSON('/templates/templatesFields',{'docType':value}, function( data ) {
+        filterFields = data[0].fields;
+        getData(value);
+    });
+
+}
+
+function placeNearestLocations(latitude,longitude) {
+//    var value = element.value;
+//    var keyName = element.id;
+
+    objMarkersFilterQuery['dbToSearchFor'] = 'metadata';// templateCategory;
+    if (selectedCategory != "" && selectedCategory != undefined) {
+        objMarkersFilterQuery = {"docType":selectedCategory,
+            '$and' : [{"Latitude" :{'$gte':latitude}},{"Latitude" :{'$lte':latitude}}]};
+    }
+    else
+    {
+        objMarkersFilterQuery = {'$and' : [{"Latitude" :{'$gte':latitude}},{"Latitude" :{'$lte':latitude}}]};
+    }
+
+
+    $.getJSON('/wareHouses/filter',objMarkersFilterQuery, function( data ) {
+
+        placeMarkesrs(data);
+
+    }, function(){
+        placeMarkesrs(null);
+    });
+}
+
 // Fill table with data
 function populateWareHouses() {
 
@@ -85,7 +149,7 @@ function populateWareHouses() {
 
     map = new google.maps.Map(document.getElementById('mymap'), {
         center: myLatLng,
-        zoom: 3
+        zoom: 5
     });
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
@@ -98,39 +162,102 @@ function populateWareHouses() {
 //            handleLocationError(true, infoWindow, map.getCenter());
         });
     }
+    google.maps.event.addListener(map, 'click', function(event) {
+        for (i = 0; i < arrUserMarkers.length; i++)
+        {
+            arrUserMarkers[i].setMap(null);
+        }
+        arrUserMarkers = [];
+        var latitude = event.latLng.lat();
+        var longitude = event.latLng.lng();
+        console.log( latitude + ', ' + longitude );
+        var pinImage = new google.maps.MarkerImage("http://www.googlemapsmarkers.com/v1/009900/");
 
+        var marker = new google.maps.Marker({
+            position: new google.maps.LatLng( parseFloat(latitude),  parseFloat(longitude)),
+            icon: pinImage,
+            map: map
+        });
+        arrUserMarkers.push(marker);
+        objMarkersFilterQuery = {};
+        placeNearestLocations(latitude,longitude);
+    });
 
     // jQuery AJAX call for JSON
-    $.getJSON('/wareHouses/wareHouses', function( data ) {
-        wareHouses = data;
-        addInput();
-        // For each item in our JSON, add a table row and cells to the content string
-        placeMarkesrs(data);
-
-    });
+//    $.getJSON('/wareHouses/wareHouses', function( data ) {
+//        wareHouses = data;
+//        addInput();
+//        // For each item in our JSON, add a table row and cells to the content string
+//        placeMarkesrs(data);
+//
+//    });
 
 
 };
 
-function filterWareHouses(keyName, element) {
-//        var ele = $("#" + elementId);
-    console.log(element);
+function filterMarkerData(templateCategory, keyName, element) {
     var value = element.value;
 
-//    req.filter = {keyName : value};
+    objMarkersFilterQuery['dbToSearchFor'] = 'metadata';// templateCategory;
+    if (value == "" || value == undefined) {
+        delete objMarkersFilterQuery[keyName];
+    }
+    else
+    {
+        objMarkersFilterQuery[keyName] = value;
+    }
+    objMarkersFilterQuery['docType'] = templateCategory;
+    delete objMarkersFilterQuery['$and'];
 
-//    var filtered = _.where(wareHouses, {keyName: value});
-    var obj = {};
-    obj[keyName] = value;
 
-    $.getJSON('/wareHouses/filter',obj, function( data ) {
+    $.getJSON('/wareHouses/filter',objMarkersFilterQuery, function( data ) {
+
         placeMarkesrs(data);
 
     }, function(){
-
+        placeMarkesrs(null);
     });
 }
 
 function resetMarkers() {
     placeMarkesrs(wareHouses);
+}
+
+function showFilters(filterName) {
+    $("#filter1").hide();
+    $("#salesPerson").hide();
+
+    $("#" + filterName).show();
+}
+
+
+function loadFilterSalesPerson(element) {
+    var value = element.value;
+    var keyName = element.id;
+
+    objMarkersFilterQuery['dbToSearchFor'] = 'salesPerson';// templateCategory;
+    if (value == "" || value == undefined) {
+        delete objMarkersFilterQuery[keyName];
+    }
+    else
+    {
+        objMarkersFilterQuery[keyName] = value;
+    }
+
+
+    $.getJSON('/wareHouses/filter',objMarkersFilterQuery, function( data ) {
+
+        placeMarkesrs(data);
+
+    }, function(){
+        placeMarkesrs(null);
+    });
+//    var value = element.value;
+//    selectedCategory = value;
+//
+//    $.getJSON('/templates/templatesFields',{'docType':value}, function( data ) {
+//        filterFields = data[0].fields;
+//        getData(value);
+//    });
+
 }

@@ -9,6 +9,7 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 var wareHouses = require('./routes/wareHouses');
+var templates = require('./routes/templates');
 
 
 // Database
@@ -43,6 +44,7 @@ app.use(function(req,res,next){
 app.use('/', routes);
 app.use('/users', users);
 app.use('/wareHouses', wareHouses);
+app.use('/templates', templates);
 
 // Make our db accessible to our router
 

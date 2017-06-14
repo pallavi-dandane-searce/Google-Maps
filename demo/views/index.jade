@@ -11,20 +11,38 @@ html
         block content
         script(async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVR5iaxk4V2f3OqyyhwUrZdWvE7L7n8Uo&callback=initMap")
         script(src='http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js')
+        script(src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js")
+        //script(src='/javascripts/templates.js')
         script(src='/javascripts/mapMarkers.js')
 
         block content
         //h1= title
-        div
-            h1(style="text-align:center") WareHouses
-            div(id="filter")
-            label(style = "font-size: 14") City
-            select(id="wareHouseCity", onchange="filterWareHouses('city',this)", style="margin-left: 5px;padding :5px; width:200px; ")
-            button(onclick="resetMarkers()", style="font-size: 14px; padding: 5px 15px; border-radius: 2px;margin-left:5px; ") Reset
-            div
-            br
+
+
+        div(class="main")
+            div(id="dashboardButtons", class="container2")
+                button(class="menu_item", img ="images/growth.png", onclick="showFilters('filter1')")
+                button(class="menu_item", img ="images/growth.png", onclick="showFilters('salesPerson')")
+            //h2(style="text-align:center") WareHouses
+            //label(style = "font-size: 14") City
+            //select(id="wareHouseCity", onchange="filterWareHouses('city',this)", style="margin-left: 5px;padding :5px; width:200px; ")
+            //button(onclick="resetMarkers()", style="font-size: 14px; padding: 5px 15px; border-radius: 2px;margin-left:5px; ") Reset
+            //div
+            //br
             //div(id="myPane",style="background-color:#E3F2FF;")
-            div(id="mymap",style="width:95%; height:500px; overflow:;")
+            div(id="mymap",style="width:95%; height:570px;position : absolute")
+            div(class ="filterBlock")
+                div(id="filter1")
+                    div(class="filter_group")
+                        label Category
+                        select(id="category", onchange="loadFilter(this)")
+                        div(id="filter")
+                div(id="salesPerson")
+                    div(class="filter_group")
+                        label State
+                        select(id="salesPersonState", onchange="loadFilterSalesPerson(this)")
+                        label Ranking
+                        select(id="salesPersonRanking", onchange="loadFilterSalesPerson(this)")
         //    // Wrapper
         //#wrapper
         //    // USER LIST

@@ -15,9 +15,20 @@ router.get('/wareHouses', function(req, res) {
 
 router.get('/filter', function(req, res) {
     var db = req.db;
-    console.log(req.query);
     var filter = req.filter;
-    var collection = db.get('wareHouses');
+    var collection = db.get(req.query['dbToSearchFor']);
+    delete req.query['dbToSearchFor'];
+    console.log(req.query);
+
+    collection.find(req.query,{},function(e,docs){
+        res.json(docs);
+    });
+});
+
+router.get('/getData', function(req, res) {
+    var db = req.db;
+//    var dbName = req.query.dbName;
+    var collection = db.get('metadata');
 
     collection.find(req.query,{},function(e,docs){
         res.json(docs);
